@@ -1,0 +1,36 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+import openai
+
+app = FastAPI()
+
+# Configure OpenAI API key (replace with your key)
+openai.api_key = "your-openai-api-key-here"
+
+class ChatRequest(BaseModel):
+    chat_input: str  # Full chat or prompt
+
+def generate_tasks(prompt):
+    response = openai.Completion.create(
+        model="text-davinci-003",  # Use a suitable model
+        prompt=f"Based on this input: '{prompt}', generate a JSON structure with a 'project' name and a 'tasks' list. Each task should have a 'name' and a 'subtasks' list, where each subtask has 'name', 'start', and 'finish' dates in 'YYYY-MM-DD' format. Ensure the project and tasks are relevant to the input.",
+        max_tokens=500
+    )
+    return response.choices[0].text.strip()
+
+@app.post("/get-tasks")
+async def get_tasks(chat: ChatRequest):
+    try:
+        # Generate JSON from OpenAI
+        json_str = generate_tasks(chat.chat_input)
+        # Parse the JSON (assuming OpenAI returns valid JSON)
+        import json
+        data = json.loads(json_str)
+        return data
+    except Exception as e:
+        return {"error": str(e)}
+
+# Example for testing
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
